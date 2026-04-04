@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "follow-anything"
+version = "0.1.0"
+description = "MAVLink visual follow: Qwen bbox + CSRT + velocity servo"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.24",
+    "opencv-python-headless>=4.8",
+    "openai>=1.0",
+    "pymavlink>=2.4",
+]
+
+[project.optional-dependencies]
+dev = ["mypy>=1.8", "ruff>=0.4"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/follow_anything"]
+
+[tool.ruff]
+line-length = 100
