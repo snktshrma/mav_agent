@@ -20,6 +20,11 @@ pip install -e .
 python test_track.py --rtsp 'rtsp://127.0.0.1:8554/stream' --connection udp:0.0.0.0:14550 --query person
 ```
 
+## To-DO
+- [ ] Add depth estimatiion and PCL handling to extract and estimate distance to the tracked objects
+- [ ] Merge with OpenClaw and Ardupilot Mavproxy AI module
+- [ ] Add spatio-temporal memory module
+
 ## Notes
 
 This module is originally integrated for DimOS in [PR #1576](https://github.com/dimensionalOS/dimos/pull/1576). It is provided here as a separate package to enable native and easy support for ardupilot/mavlink vehicles. For full context, refer to that PR.
