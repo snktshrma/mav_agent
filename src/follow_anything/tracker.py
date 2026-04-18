@@ -196,6 +196,10 @@ class AITracker:
     def is_active(self):
         return self._tracking_active
 
+    @property
+    def is_mavlink_connected(self) -> bool:
+        return bool(self._mavlink.connected)
+
     def close(self):
         self.stop_tracking()
         self.stop_rtsp()

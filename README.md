@@ -20,6 +20,29 @@ pip install -e .
 python test_track.py --rtsp 'rtsp://127.0.0.1:8554/stream' --connection udp:0.0.0.0:14550 --query person
 ```
 
+## Interactive CLI (skills)
+
+After `pip install -e .`, run the Textual TUI:
+
+```bash
+mav-cli --connection udp:0.0.0.0:14550 --rtsp 'rtsp://127.0.0.1:8554/stream'
+# or
+python -m follow_anything.cli
+```
+
+Type `help` for commands (`connect`, `rtsp`, `follow`, `stop`, `status`). See [AGENTS.md](AGENTS.md).
+
+### OpenAI agent (LangGraph)
+
+Set `OPENAI_API_KEY`. Optional: `FOLLOW_ANYTHING_OPENAI_MODEL` (default `gpt-4o-mini`).
+
+```bash
+export OPENAI_API_KEY=sk-...
+mav-cli --agent --connection udp:0.0.0.0:14550 --rtsp 'rtsp://127.0.0.1:8554/stream'
+```
+
+Describe goals in natural language; the model uses `create_react_agent` with checkpointed thread state and selects skills. Use `!command` for direct skills (e.g. `!status`).
+
 ## To-DO
 - [ ] Add depth estimatiion and PCL handling to extract and estimate distance to the tracked objects
 - [ ] Merge with OpenClaw and Ardupilot Mavproxy AI module

@@ -3,7 +3,6 @@ import json
 import os
 
 import cv2
-import numpy as np
 from openai import OpenAI
 
 
@@ -14,7 +13,9 @@ def _rgb_to_jpeg_b64(frame):
     return base64.b64encode(buf.tobytes()).decode("ascii")
 
 
-def get_bbox_from_qwen_frame(frame, object_name=None, api_key=None, model_name="qwen2.5-vl-72b-instruct"):
+def get_bbox_from_qwen_frame(
+    frame, object_name=None, api_key=None, model_name="qwen2.5-vl-72b-instruct"
+):
     key = api_key or os.getenv("ALIBABA_API_KEY")
     if not key:
         raise ValueError("key not available")

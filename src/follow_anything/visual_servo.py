@@ -1,5 +1,7 @@
 class DroneVisualServoingController:
-    def __init__(self, forward_speed=0.2, vertical_error_gain=0.0012, lateral_error_to_yaw_rate=0.001):
+    def __init__(
+        self, forward_speed=0.2, vertical_error_gain=0.0012, lateral_error_to_yaw_rate=0.001
+    ):
         self.forward_speed = forward_speed
         self.vertical_error_gain = vertical_error_gain
         self.lateral_error_to_yaw_rate = lateral_error_to_yaw_rate

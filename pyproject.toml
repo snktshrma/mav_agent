@@ -13,7 +13,14 @@ dependencies = [
     "opencv-python-headless>=4.8",
     "openai>=1.0",
     "pymavlink>=2.4",
+    "textual>=0.47",
+    "langchain-core>=0.3",
+    "langchain-openai>=0.3",
+    "langgraph>=0.2",
 ]
+
+[project.scripts]
+mav-cli = "follow_anything.cli.humancli:main"
 
 [project.optional-dependencies]
 dev = ["mypy>=1.8", "ruff>=0.4"]
