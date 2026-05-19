@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from follow_anything.session import DroneSession
+from follow_anything.tracker import AITracker
 from follow_anything.skills.registry import list_skills, register_skill
 
 
@@ -20,6 +21,57 @@ def _connect(session: DroneSession, args: dict[str, str]) -> str:
     if t.connect_mavlink():
         return "MAVLink connected."
     return "MAVLink connection failed."
+
+
+def _ensure_connected(session: DroneSession) -> tuple[AITracker, str | None]:
+    t = session.get_tracker()
+    if not t.is_mavlink_connected:
+        if not t.connect_mavlink():
+            return t, "MAVLink not connected. Run connect first."
+    return t, None
+
+
+def _arm(session: DroneSession, args: dict[str, str]) -> str:
+    _ = args
+    t, err = _ensure_connected(session)
+    if err:
+        return err
+    if t.arm_vehicle():
+        return "GUIDED mode set and motors armed."
+    return "Arm failed (check prearm, mode, or SITL state)."
+
+
+def _takeoff(session: DroneSession, args: dict[str, str]) -> str:
+    alt_s = (args.get("altitude") or args.get("_positional") or "3").strip()
+    try:
+        altitude = float(alt_s)
+    except ValueError:
+        return "Invalid altitude (expected a number in meters)."
+    t, err = _ensure_connected(session)
+    if err:
+        return err
+    if not t.is_armed():
+        return "Not armed. Run arm first, or use arm_takeoff."
+    if t.takeoff(altitude=altitude):
+        return f"Takeoff command sent (target altitude {altitude} m)."
+    return "Takeoff failed."
+
+
+def _arm_takeoff(session: DroneSession, args: dict[str, str]) -> str:
+    alt_s = (args.get("altitude") or args.get("_positional") or "3").strip()
+    try:
+        altitude = float(alt_s)
+    except ValueError:
+        return "Invalid altitude (expected a number in meters)."
+    t, err = _ensure_connected(session)
+    if err:
+        return err
+    if t.arm_and_takeoff(altitude=altitude):
+        return (
+            f"GUIDED, armed, and takeoff sent (target {altitude} m). "
+            "Use status to confirm."
+        )
+    return "arm_takeoff failed (check prearm / SITL)."
 
 
 def _rtsp(session: DroneSession, args: dict[str, str]) -> str:
@@ -65,6 +117,27 @@ def _help(session: DroneSession, args: dict[str, str]) -> str:
 
 def register_builtin_skills() -> None:
     register_skill("connect", "Connect MAVLink using session --connection", _connect)
+    register_skill(
+        "arm",
+        "Set GUIDED mode then arm motors. Does not take off. Does not require RTSP.",
+        _arm,
+    )
+    register_skill(
+        "takeoff",
+        "Take off to altitude in meters. Requires already armed; call arm first.",
+        _takeoff,
+        for_openai={
+            "altitude": "Target altitude in meters (default 3)",
+        },
+    )
+    register_skill(
+        "arm_takeoff",
+        "Set GUIDED, arm, then takeoff in one step (preferred when user asks for both).",
+        _arm_takeoff,
+        for_openai={
+            "altitude": "Target altitude in meters (default 3)",
+        },
+    )
     register_skill(
         "rtsp",
         "Start RTSP video stream before follow or tracking",

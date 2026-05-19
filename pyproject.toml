@@ -9,6 +9,8 @@ description = "MAVLink visual follow: Qwen bbox + CSRT + velocity servo"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
     "numpy>=1.24",
     "opencv-python-headless>=4.8",
     "openai>=1.0",
@@ -23,7 +25,7 @@ dependencies = [
 mav-cli = "follow_anything.cli.humancli:main"
 
 [project.optional-dependencies]
-dev = ["mypy>=1.8", "ruff>=0.4"]
+dev = ["mypy>=1.8", "pytest>=8", "ruff>=0.4"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/follow_anything"]

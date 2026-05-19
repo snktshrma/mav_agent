@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import shlex
 import sys
 from typing import Any
@@ -138,11 +139,18 @@ class HumanCLIApp(App[None]):
 
 def main() -> None:
     p = argparse.ArgumentParser(
-        description="MAVLink skills TUI (mav-cli): registry includes follow, connect, rtsp, etc."
+        description=(
+            "mav-cli: Textual TUI for MAVLink skills, optional LangGraph --agent, "
+            "or MCP-only server --mcp (not with TUI/agent)."
+        )
     )
     p.add_argument("--connection", default="udp:0.0.0.0:14550", help="MAVLink connection string")
     p.add_argument("--rtsp", default=None, help="Optional default RTSP URL")
-    p.add_argument("--qwen-model", default="qwen2.5-vl-72b-instruct", help="Qwen-VL model name")
+    p.add_argument(
+        "--qwen-model",
+        default="nvidia/Qwen2.5-VL-7B-Instruct-NVFP4",
+        help="Qwen-VL model name (local OpenAI-compatible server)",
+    )
     p.add_argument(
         "--agent",
         action="store_true",
@@ -158,7 +166,26 @@ def main() -> None:
         default=None,
         help="OpenAI API key (default: env OPENAI_API_KEY)",
     )
+    p.add_argument(
+        "--mcp",
+        action="store_true",
+        help="Run MCP HTTP server only (no TUI). Mutually exclusive with default TUI and --agent.",
+    )
+    p.add_argument(
+        "--mcp-host",
+        default=None,
+        help="MCP bind address (default: env FOLLOW_ANYTHING_MCP_HOST or 127.0.0.1)",
+    )
+    p.add_argument(
+        "--mcp-port",
+        type=int,
+        default=None,
+        help="MCP port (default: env FOLLOW_ANYTHING_MCP_PORT or 8765)",
+    )
     args = p.parse_args()
+    if args.mcp and args.agent:
+        print("Use either --mcp or --agent, not both.", file=sys.stderr)
+        raise SystemExit(2)
     session = DroneSession(
         connection_string=args.connection,
         rtsp_url=args.rtsp,
@@ -174,6 +201,31 @@ def main() -> None:
 
         assert api_key is not None
         lc_graph = build_agent_graph(session, openai_model, api_key)
+
+    if args.mcp:
+        mcp_host = args.mcp_host or os.environ.get("FOLLOW_ANYTHING_MCP_HOST", "127.0.0.1")
+        raw_port = args.mcp_port
+        if raw_port is None:
+            env_p = os.environ.get("FOLLOW_ANYTHING_MCP_PORT", "8765")
+            try:
+                mcp_port = int(env_p)
+            except ValueError:
+                print(f"Invalid FOLLOW_ANYTHING_MCP_PORT: {env_p!r}", file=sys.stderr)
+                raise SystemExit(2) from None
+        else:
+            mcp_port = raw_port
+        try:
+            from follow_anything.mcp.server import run_mcp_blocking
+
+            print(
+                f"MCP server http://{mcp_host}:{mcp_port}/mcp (GET /health). Ctrl+C to stop.",
+                flush=True,
+            )
+            run_mcp_blocking(session, host=mcp_host, port=mcp_port)
+        finally:
+            session.close()
+        return
+
     try:
         app = HumanCLIApp(
             session,

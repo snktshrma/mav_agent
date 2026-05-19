@@ -5,6 +5,15 @@ import os
 import cv2
 from openai import OpenAI
 
+QWEN_API = "local"  # "local" or "remote"
+
+QWEN_DEFAULT_MODEL = "nvidia/Qwen2.5-VL-7B-Instruct-NVFP4"
+QWEN_DEFAULT_BASE_URL = "http://100.107.137.26:8000/v1"
+QWEN_DEFAULT_API_KEY = "local"
+
+_ALIBABA_BASE_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+_ALIBABA_MODEL = "qwen2.5-vl-72b-instruct"
+
 
 def _rgb_to_jpeg_b64(frame):
     bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
@@ -14,11 +23,24 @@ def _rgb_to_jpeg_b64(frame):
 
 
 def get_bbox_from_qwen_frame(
-    frame, object_name=None, api_key=None, model_name="qwen2.5-vl-72b-instruct"
+    frame,
+    object_name=None,
+    api_key=None,
+    model_name=None,
+    base_url=None,
 ):
-    key = api_key or os.getenv("ALIBABA_API_KEY")
-    if not key:
-        raise ValueError("key not available")
+    mode = os.getenv("QWEN_API", QWEN_API).lower()
+    if mode == "remote":
+        key = api_key or os.getenv("ALIBABA_API_KEY")
+        if not key:
+            raise ValueError("ALIBABA_API_KEY required when QWEN_API=remote")
+        base_url = base_url or _ALIBABA_BASE_URL
+        if model_name is None or model_name == QWEN_DEFAULT_MODEL:
+            model_name = _ALIBABA_MODEL
+    else:
+        key = api_key or os.getenv("QWEN_API_KEY", QWEN_DEFAULT_API_KEY)
+        base_url = base_url or os.getenv("QWEN_BASE_URL", QWEN_DEFAULT_BASE_URL)
+        model_name = model_name or QWEN_DEFAULT_MODEL
 
     prompt = (
         f"Look at this image and find the {object_name or 'most prominent object'}. "
@@ -28,10 +50,7 @@ def get_bbox_from_qwen_frame(
     )
 
     b64 = _rgb_to_jpeg_b64(frame)
-    client = OpenAI(
-        base_url="https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
-        api_key=key,
-    )
+    client = OpenAI(base_url=base_url, api_key=key)
     resp = client.chat.completions.create(
         model=model_name,
         messages=[

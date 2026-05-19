@@ -43,9 +43,22 @@ mav-cli --agent --connection udp:0.0.0.0:14550 --rtsp 'rtsp://127.0.0.1:8554/str
 
 Describe goals in natural language; the model uses `create_react_agent` with checkpointed thread state and selects skills. Use `!command` for direct skills (e.g. `!status`).
 
+### MCP server (external agents: OpenClaw, Claude, Cursor)
+
+Do **not** use `--agent` or the TUI together with MCP in one process. Run MCP only:
+
+```bash
+mav-cli --mcp --connection udp:0.0.0.0:14550 --rtsp 'rtsp://127.0.0.1:8554/stream'
+```
+
+Defaults: bind `127.0.0.1`, port **8765**. JSON-RPC POST **`/mcp`** (methods `initialize`, `tools/list`, `tools/call`). **`GET /health`** for a quick check.
+
+Override with **`--mcp-host`**, **`--mcp-port`**, or env **`FOLLOW_ANYTHING_MCP_HOST`** / **`FOLLOW_ANYTHING_MCP_PORT`**.
+
+Point your MCP client at `http://127.0.0.1:8765/mcp`.
+
 ## To-DO
 - [ ] Add depth estimatiion and PCL handling to extract and estimate distance to the tracked objects
-- [ ] Merge with OpenClaw and Ardupilot Mavproxy AI module
 - [ ] Add spatio-temporal memory module
 
 ## Notes

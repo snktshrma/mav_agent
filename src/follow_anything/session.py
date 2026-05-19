@@ -10,12 +10,14 @@ class DroneSession:
         self,
         connection_string: str = "udp:0.0.0.0:14550",
         rtsp_url: str | None = None,
-        qwen_model: str = "qwen2.5-vl-72b-instruct",
+        qwen_model: str = "nvidia/Qwen2.5-VL-7B-Instruct-NVFP4",
+        qwen_base_url: str | None = None,
         api_key: str | None = None,
     ) -> None:
         self._connection_string = connection_string
         self._rtsp_url = rtsp_url
         self._qwen_model = qwen_model
+        self._qwen_base_url = qwen_base_url
         self._api_key = api_key
         self._tracker: AITracker | None = None
 
@@ -29,6 +31,7 @@ class DroneSession:
                 connection_string=self._connection_string,
                 rtsp_url=self._rtsp_url,
                 qwen_model=self._qwen_model,
+                qwen_base_url=self._qwen_base_url,
                 api_key=self._api_key,
             )
         return self._tracker

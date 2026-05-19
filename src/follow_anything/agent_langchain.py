@@ -9,31 +9,18 @@ from langchain_core.tools import StructuredTool
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
-from pydantic import BaseModel, ConfigDict, Field, SecretStr, create_model
+from pydantic import SecretStr
 
 from follow_anything.agent import SYSTEM_PROMPT
 from follow_anything.session import DroneSession
 from follow_anything.skills.registry import dispatch, list_skills
 
 
-class _EmptyArgs(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-
 def _tools_for_session(session: DroneSession) -> list[StructuredTool]:
     tools: list[StructuredTool] = []
     for s in list_skills():
-        if s.openai is None:
+        if s.args_model is None:
             continue
-        if not s.openai:
-            schema: type[BaseModel] = _EmptyArgs
-        else:
-            fields = {k: (str, Field(description=v)) for k, v in s.openai.items()}
-            schema = create_model(
-                f"Args_{s.name}",
-                __config__=ConfigDict(extra="forbid"),
-                **fields,
-            )  # type: ignore[call-overload]
         skill_name = s.name
 
         def _make(name: str) -> Any:
@@ -51,7 +38,7 @@ def _tools_for_session(session: DroneSession) -> list[StructuredTool]:
                 name=s.name,
                 description=s.description,
                 func=_make(skill_name),
-                args_schema=schema,
+                args_schema=s.args_model,
             )
         )
     return tools

@@ -6,9 +6,10 @@ import os
 
 SYSTEM_PROMPT = (
     "You control a MAVLink drone stack with tools. Use tools to act; do not invent results.\n"
-    "Prefer: connect MAVLink first if needed, set RTSP if video is required, "
-    "then follow/stop/status as appropriate.\n"
-    "Be brief in final replies."
+    "For arm and takeoff together, prefer the arm_takeoff tool (GUIDED, arm, then takeoff). "
+    "Otherwise strict order: connect, arm (sets GUIDED and arms), then takeoff. "
+    "Never call takeoff before arm.\n"
+    "RTSP is only for visual follow, not arm or takeoff. Be brief in final replies."
 )
 
 

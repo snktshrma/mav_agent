@@ -79,6 +79,123 @@ class MavlinkConnection:
             )
         return True
 
+    def set_mode(self, mode: str) -> bool:
+        if not self.connected or self.mavlink is None:
+            return False
+        mode_mapping = {
+            "STABILIZE": 0,
+            "GUIDED": 4,
+            "LOITER": 5,
+            "RTL": 6,
+            "LAND": 9,
+        }
+        if mode not in mode_mapping:
+            return False
+        self.mavlink.mav.command_long_send(
+            self.mavlink.target_system,
+            self.mavlink.target_component,
+            mavutil.mavlink.MAV_CMD_DO_SET_MODE,
+            0,
+            mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
+            mode_mapping[mode],
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
+        time.sleep(0.3)
+        return True
+
+    def is_armed(self) -> bool:
+        if not self.connected or self.mavlink is None:
+            return False
+        msg = self.mavlink.recv_match(type="HEARTBEAT", blocking=True, timeout=2)
+        if msg is None:
+            return False
+        return bool(msg.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED)
+
+    def _send_arm_disarm(self, arm: bool) -> bool:
+        assert self.mavlink is not None
+        self.mavlink.mav.command_long_send(
+            self.mavlink.target_system,
+            self.mavlink.target_component,
+            mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
+            0,
+            1 if arm else 0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
+        ack = self.mavlink.recv_match(type="COMMAND_ACK", blocking=True, timeout=3)
+        if ack and ack.command == mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM:
+            return ack.result == mavutil.mavlink.MAV_RESULT_ACCEPTED
+        return False
+
+    def _wait_armed(self, timeout_s: float = 3.0) -> bool:
+        deadline = time.time() + timeout_s
+        while time.time() < deadline:
+            if self.is_armed():
+                return True
+            time.sleep(0.2)
+        return False
+
+    def arm(self, *, set_guided: bool = True) -> bool:
+        """Set GUIDED (optional), then arm. Does not take off."""
+        if not self.connected or self.mavlink is None:
+            return False
+        if set_guided and not self.set_mode("GUIDED"):
+            return False
+        if self.is_armed():
+            return True
+        if not self._send_arm_disarm(True):
+            return False
+        return self._wait_armed(timeout_s=3.0)
+
+    def _send_takeoff(self, altitude: float) -> bool:
+        assert self.mavlink is not None
+        self.mavlink.mav.command_long_send(
+            self.mavlink.target_system,
+            self.mavlink.target_component,
+            mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            altitude,
+        )
+        ack = self.mavlink.recv_match(type="COMMAND_ACK", blocking=True, timeout=3)
+        if ack and ack.command == mavutil.mavlink.MAV_CMD_NAV_TAKEOFF:
+            return ack.result == mavutil.mavlink.MAV_RESULT_ACCEPTED
+        return True
+
+    def takeoff(self, altitude: float = 3.0) -> bool:
+        """Take off only if already armed. Does not change mode or arm."""
+        if not self.connected or self.mavlink is None:
+            return False
+        if not self.is_armed():
+            return False
+        return self._send_takeoff(altitude)
+
+    def arm_and_takeoff(self, altitude: float = 3.0) -> bool:
+        """GUIDED -> arm -> takeoff in order."""
+        if not self.connected or self.mavlink is None:
+            return False
+        if not self.set_mode("GUIDED"):
+            return False
+        if not self.is_armed():
+            if not self._send_arm_disarm(True):
+                return False
+            if not self._wait_armed(timeout_s=3.0):
+                return False
+        return self._send_takeoff(altitude)
+
     def stop(self):
         if not self.connected or self.mavlink is None:
             return False

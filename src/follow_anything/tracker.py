@@ -61,12 +61,14 @@ class AITracker:
         self,
         connection_string="udp:0.0.0.0:14550",
         rtsp_url=None,
-        qwen_model="qwen2.5-vl-72b-instruct",
+        qwen_model="nvidia/Qwen2.5-VL-7B-Instruct-NVFP4",
+        qwen_base_url=None,
         api_key=None,
         mavlink=None,
     ):
         self.servoing_controller = DroneVisualServoingController()
         self._qwen_model = qwen_model
+        self._qwen_base_url = qwen_base_url
         self._api_key = api_key
         self._mavlink = mavlink if mavlink is not None else MavlinkConnection(connection_string)
         self._owns_mavlink = mavlink is None
@@ -88,6 +90,18 @@ class AITracker:
 
     def connect_mavlink(self, heartbeat_timeout=30.0):
         return self._mavlink.connect(heartbeat_timeout=heartbeat_timeout)
+
+    def arm_vehicle(self) -> bool:
+        return self._mavlink.arm(set_guided=True)
+
+    def is_armed(self) -> bool:
+        return self._mavlink.is_armed()
+
+    def takeoff(self, altitude: float = 3.0) -> bool:
+        return self._mavlink.takeoff(altitude=altitude)
+
+    def arm_and_takeoff(self, altitude: float = 3.0) -> bool:
+        return self._mavlink.arm_and_takeoff(altitude=altitude)
 
     def start_rtsp(self, url=None):
         u = url or self._rtsp_url
@@ -118,7 +132,11 @@ class AITracker:
             return "Error: No video frame available"
         try:
             bbox = get_bbox_from_qwen_frame(
-                frame, query, api_key=self._api_key, model_name=self._qwen_model
+                frame,
+                query,
+                api_key=self._api_key,
+                model_name=self._qwen_model,
+                base_url=self._qwen_base_url,
             )
             if bbox is None:
                 return "No object detected"
