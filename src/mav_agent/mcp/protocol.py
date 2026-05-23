@@ -4,13 +4,11 @@ from __future__ import annotations
 
 import json
 import logging
-import threading
 import time
 from typing import Any
 
-from follow_anything.session import DroneSession
-from follow_anything.skills.registry import (
-    dispatch,
+from mav_agent.session import DroneSession
+from mav_agent.skills.registry import (
     get_skill,
     list_skills,
     skill_input_schema,
@@ -40,7 +38,7 @@ def _handle_initialize(req_id: Any) -> dict[str, Any]:
         {
             "protocolVersion": PROTOCOL_VERSION,
             "capabilities": {"tools": {}},
-            "serverInfo": {"name": "follow-anything", "version": "0.1.0"},
+            "serverInfo": {"name": "mav-agent", "version": "0.1.0"},
         },
     )
 
@@ -64,7 +62,6 @@ def _handle_tools_call_sync(
     req_id: Any,
     params: dict[str, Any],
     session: DroneSession,
-    lock: threading.Lock,
 ) -> dict[str, Any]:
     name = str(params.get("name", "") or "")
     if not name:
@@ -79,8 +76,7 @@ def _handle_tools_call_sync(
 
     t0 = time.monotonic()
     try:
-        with lock:
-            text = dispatch(session, name, args)
+        text = session.dispatch_skill(name, args)
     except Exception as e:
         logger.exception("MCP tools/call failed tool=%s", name)
         return _jsonrpc_result_text(req_id, f"Error running tool '{name}': {e}")
@@ -93,7 +89,6 @@ def _handle_tools_call_sync(
 def handle_jsonrpc(
     request: dict[str, Any],
     session: DroneSession,
-    lock: threading.Lock,
 ) -> dict[str, Any] | None:
     """Handle one JSON-RPC object. Returns None for notifications (no id)."""
     method = request.get("method", "")
@@ -110,7 +105,7 @@ def handle_jsonrpc(
     if method == "tools/list":
         return _handle_tools_list(req_id)
     if method == "tools/call":
-        return _handle_tools_call_sync(req_id, params, session, lock)
+        return _handle_tools_call_sync(req_id, params, session)
 
     return _jsonrpc_error(req_id, -32601, f"Unknown method: {method}")
 

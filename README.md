@@ -1,10 +1,11 @@
-# follow-anything
+# mav-agent
 
-Visual tracking and following for mavlink supported vehicles (tested on ardupilot).
+Agentic control for ArduPilot / MAVLink vehicles: typed skills, MCP, LangGraph agent, and visual follow (Qwen-VL + CSRT).
 
-## Flow
-1. Qwen-VL generated an initial bbox from a text query
-2. CSRT tracks it and using a simple gain controller, send body-frame velocities.
+## Flow (visual follow)
+
+1. Qwen-VL generates an initial bbox from a text query
+2. CSRT tracks it; a gain controller sends body-frame velocities
 
 ## Setup
 
@@ -12,7 +13,7 @@ Visual tracking and following for mavlink supported vehicles (tested on ardupilo
 pip install -e .
 ```
 
-- Set `ALIBABA_API_KEY` for Qwen
+- Set `ALIBABA_API_KEY` for Qwen (remote) or run a local OpenAI-compatible Qwen server
 
 ## Example
 
@@ -20,49 +21,91 @@ pip install -e .
 python test_track.py --rtsp 'rtsp://127.0.0.1:8554/stream' --connection udp:0.0.0.0:14550 --query person
 ```
 
-## Interactive CLI (skills)
+## Runtime modes
 
-After `pip install -e .`, run the Textual TUI:
+Default is **LangGraph agent TUI**. Pass **`--mcp`** for the HTTP MCP server only.
 
 ```bash
-mav-cli --connection udp:0.0.0.0:14550 --rtsp 'rtsp://127.0.0.1:8554/stream'
-# or
-python -m follow_anything.cli
+mav-cli --connection udp:0.0.0.0:14550 --image-source rtsp --rtsp 'rtsp://127.0.0.1:8554/stream'
 ```
 
-Type `help` for commands (`connect`, `rtsp`, `follow`, `stop`, `status`). See [AGENTS.md](AGENTS.md).
+### Gazebo camera (UDP port 5600, not RTSP)
+
+ArduPilot Gazebo sends **RTP/H264 on UDP 5600**, not an RTSP URL:
+
+```bash
+mav-cli --connection udp:0.0.0.0:14550 --image-source udp --video-port 5600
+```
+
+Requires `gst-launch-1.0` and plugins (`gstreamer1.0-plugins-good`, `gstreamer1.0-libav`).
+
+**Do not** run a separate `gst-launch udpsrc port=5600 ...` while mav-cli is using `--video-port 5600`.
+
+### Backends (MAVLink vs ROS2)
+
+Default is direct MAVLink:
+
+```bash
+mav-cli --backend mavlink --connection udp:0.0.0.0:14550 --image-source rtsp --rtsp 'rtsp://127.0.0.1:8554/stream'
+```
+
+When ArduPilot DDS is running:
+
+```bash
+source /opt/ros/humble/setup.bash
+source ~/ngps_ws/install/setup.bash   # ardupilot_msgs
+pip install -e ".[ros]"
+mav-cli --backend ros2 --ros-image-topic /camera/image_raw
+```
+
+Skills are the same; `session.get_control()` uses pymavlink or ROS2 `/ap/*` topics.
 
 ### OpenAI agent (LangGraph)
 
-Set `OPENAI_API_KEY`. Optional: `FOLLOW_ANYTHING_OPENAI_MODEL` (default `gpt-4o-mini`).
+Set `OPENAI_API_KEY` (model is `DEFAULT_OPENAI_MODEL` in code, currently `gpt-4o-mini`).
 
 ```bash
 export OPENAI_API_KEY=sk-...
-mav-cli --agent --connection udp:0.0.0.0:14550 --rtsp 'rtsp://127.0.0.1:8554/stream'
+mav-cli --connection udp:0.0.0.0:14550 --image-source rtsp --rtsp 'rtsp://127.0.0.1:8554/stream'
 ```
 
-Describe goals in natural language; the model uses `create_react_agent` with checkpointed thread state and selects skills. Use `!command` for direct skills (e.g. `!status`).
+Use `!command` for direct skills (e.g. `!status`).
 
-### MCP server (external agents: OpenClaw, Claude, Cursor)
+### MCP server (Cursor, Claude Desktop, OpenClaw)
 
-Do **not** use `--agent` or the TUI together with MCP in one process. Run MCP only:
+Run MCP only (no TUI / `--agent` in the same process):
 
 ```bash
 mav-cli --mcp --connection udp:0.0.0.0:14550 --rtsp 'rtsp://127.0.0.1:8554/stream'
 ```
 
-Defaults: bind `127.0.0.1`, port **8765**. JSON-RPC POST **`/mcp`** (methods `initialize`, `tools/list`, `tools/call`). **`GET /health`** for a quick check.
+Defaults: `127.0.0.1:8765`. POST **`/mcp`**, GET **`/health`**. Override with `--mcp-host` / `--mcp-port`.
 
-Override with **`--mcp-host`**, **`--mcp-port`**, or env **`FOLLOW_ANYTHING_MCP_HOST`** / **`FOLLOW_ANYTHING_MCP_PORT`**.
+## Environment variables
 
-Point your MCP client at `http://127.0.0.1:8765/mcp`.
+Only API keys use env vars. Everything else is CLI flags or code defaults.
 
-## To-DO
-- [ ] Add depth estimatiion and PCL handling to extract and estimate distance to the tracked objects
-- [ ] Add spatio-temporal memory module
+| Variable | Purpose |
+|----------|---------|
+| `OPENAI_API_KEY` | Required for agent TUI (LangGraph) |
+| `ALIBABA_API_KEY` | Required when `--qwen-api remote` (Alibaba DashScope) |
+
+## CLI defaults (no env)
+
+| Flag | Default |
+|------|---------|
+| `--connection` | `udp:0.0.0.0:14550` |
+| `--backend` | `mavlink` |
+| `--image-source` | `udp` (default) or `rtsp` |
+| `--video-port` | `5600` (default, udp video) |
+| `--ros-image-topic` | `/camera/image_raw` (ros2 backend) |
+| `--qwen-api` | `local` |
+| `--qwen-base-url` | see `defaults.py` |
+| `--mcp-host` / `--mcp-port` | `127.0.0.1` / `8765` |
 
 ## Notes
 
-This module is originally integrated for DimOS in [PR #1576](https://github.com/dimensionalOS/dimos/pull/1576). It is provided here as a separate package to enable native and easy support for ardupilot/mavlink vehicles. For full context, refer to that PR.
+#### Humanly request :)
+The **TUI** interface and **ruff** setup are fully developed by my AI coding agent, so bugs in those areas or errors in those may need a little extra care :)
 
-
+Originally integrated for DimOS in [PR #1576](https://github.com/dimensionalOS/dimos/pull/1576). Renamed from `follow-anything` to **mav-agent** as scope expanded beyond visual follow.

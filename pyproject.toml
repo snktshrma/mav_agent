@@ -3,17 +3,18 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "follow-anything"
+name = "mav-agent"
 version = "0.1.0"
-description = "MAVLink visual follow: Qwen bbox + CSRT + velocity servo"
+description = "Agentic MAVLink/ArduPilot control: skills, MCP, LangGraph, visual follow"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
     "numpy>=1.24",
-    "opencv-python-headless>=4.8",
+    "opencv-contrib-python-headless>=4.8",
     "openai>=1.0",
+    "pydantic>=2",
     "pymavlink>=2.4",
     "textual>=0.47",
     "langchain-core>=0.3",
@@ -22,13 +23,23 @@ dependencies = [
 ]
 
 [project.scripts]
-mav-cli = "follow_anything.cli.humancli:main"
+mav-cli = "mav_agent.cli.humancli:main"
+
+[project.entry-points."mav_agent.skills"]
+# Example plugin (in your package pyproject.toml):
+# my_pkg = "my_pkg.skills:register_skills"
 
 [project.optional-dependencies]
+ros = [
+    "rclpy",
+    "sensor-msgs",
+    "geometry-msgs",
+    "geographic-msgs",
+]
 dev = ["mypy>=1.8", "pytest>=8", "ruff>=0.4"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/follow_anything"]
+packages = ["src/mav_agent"]
 
 [tool.ruff]
 line-length = 100

@@ -3,24 +3,21 @@
 from __future__ import annotations
 
 import logging
-import threading
 
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 
-from follow_anything.mcp.protocol import handle_jsonrpc, parse_json_body
-from follow_anything.session import DroneSession
+from mav_agent.mcp.protocol import handle_jsonrpc, parse_json_body
+from mav_agent.session import DroneSession
 
 logger = logging.getLogger(__name__)
 
 
 def create_app(session: DroneSession) -> FastAPI:
-    lock = threading.Lock()
-    app = FastAPI(title="follow-anything MCP")
+    app = FastAPI(title="mav-agent MCP")
     app.state.session = session
-    app.state.lock = lock
 
     app.add_middleware(
         CORSMiddleware,
@@ -48,8 +45,7 @@ def create_app(session: DroneSession) -> FastAPI:
             )
 
         sess: DroneSession = app.state.session
-        lk: threading.Lock = app.state.lock
-        result = handle_jsonrpc(body, sess, lk)
+        result = handle_jsonrpc(body, sess)
         if result is None:
             return Response(status_code=204)
         return JSONResponse(result)

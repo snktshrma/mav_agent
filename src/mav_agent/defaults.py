@@ -1,0 +1,24 @@
+"""Shared default constants."""
+
+from __future__ import annotations
+
+DEFAULT_CONNECTION = "udp:0.0.0.0:14550"
+DEFAULT_MCP_HOST = "127.0.0.1"
+DEFAULT_MCP_PORT = 8765
+DEFAULT_ROS_IMAGE_TOPIC = "/camera/image_raw"
+DEFAULT_BACKEND = "mavlink"
+DEFAULT_IMAGE_SOURCE = "udp"
+DEFAULT_VIDEO_UDP_PORT = 5600
+DEFAULT_QWEN_MODEL = "nvidia/Qwen2.5-VL-7B-Instruct-NVFP4"
+QWEN_API = "local"  # "local" or "remote"
+QWEN_DEFAULT_BASE_URL = "http://100.107.137.26:8000/v1"
+QWEN_DEFAULT_API_KEY = "local"
+ALIBABA_BASE_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+ALIBABA_QWEN_MODEL = "qwen2.5-vl-72b-instruct"
+DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
+DEFAULT_TELEMETRY_HZ = 5.0
+DEFAULT_VELOCITY_DURATION_S = 5.0
+POST_ARM_DELAY_S = 1.0
+TAKEOFF_ALT_TOLERANCE_M = 1.0
+TAKEOFF_ALT_WAIT_TIMEOUT_S = 60.0
+DEFAULT_AGENT_RECURSION_LIMIT = 50

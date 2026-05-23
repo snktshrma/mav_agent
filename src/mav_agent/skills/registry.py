@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, create_model
-from follow_anything.session import DroneSession
+from mav_agent.session import DroneSession
 
 # SkillHandler is a function type that takes a DroneSession and argument dict, returns a string.
 # Example usage:
@@ -27,6 +27,8 @@ class SkillInfo:
     handler: SkillHandler
     args_model: SkillArgsModel | None
     """None means not exposed to LLM/MCP. Otherwise shared typed args schema."""
+    capability: str | None = None
+    """If set, backend must list this in capabilities or dispatch returns unsupported."""
 
 
 _REGISTRY: dict[str, SkillInfo] = {}
@@ -38,15 +40,18 @@ def register_skill(
     handler: SkillHandler,
     *,
     for_openai: ForOpenAI = True,
+    expose_to_agents: ForOpenAI | None = None,
+    capability: str | None = None,
 ) -> None:
     key = name.strip().lower()
     title = "".join(part.capitalize() for part in key.replace("-", "_").split("_")) or "Skill"
-    if for_openai is False:
+    agent_schema = expose_to_agents if expose_to_agents is not None else for_openai
+    if agent_schema is False:
         args_model: SkillArgsModel | None = None
-    elif for_openai is True:
+    elif agent_schema is True:
         args_model = _EmptyArgs
     else:
-        fields = {k: (str, Field(description=v)) for k, v in dict(for_openai).items()}
+        fields = {k: (str, Field(description=v)) for k, v in dict(agent_schema).items()}
         args_model = create_model(
             f"{title}Args",
             __config__=ConfigDict(extra="forbid"),
@@ -57,6 +62,7 @@ def register_skill(
         description=description,
         handler=handler,
         args_model=args_model,
+        capability=capability,
     )
 
 
@@ -101,4 +107,10 @@ def dispatch(session: DroneSession, name: str, args: dict[str, str]) -> str:
     info = _REGISTRY.get(key)
     if info is None:
         return f"Unknown command: {name}. Type help."
+    if info.capability is not None:
+        backend = session.get_control()
+        if info.capability not in backend.capabilities:
+            return (
+                f"'{name}' is not supported on the {backend.backend_name} backend."
+            )
     return info.handler(session, args)
