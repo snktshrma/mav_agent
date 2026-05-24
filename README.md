@@ -2,6 +2,11 @@
 
 Agentic control for ArduPilot / MAVLink vehicles
 
+## Demos
+
+- [LangGraph agent TUI](https://youtu.be/3irVZASZwN8) - natural-language control via `mav-cli` (arm, takeoff, move, etc.)
+- [Cursor agent over MCP](https://youtu.be/L-Ah2H9a5AQ) - external agent connected to the MCP server, visual follow / servoing
+
 ## Setup
 
 ```bash
@@ -13,7 +18,7 @@ pip install -e .
 - **Local (default):** run an OpenAI-compatible Qwen server ([vLLM setup](#vllm-setup)); point `--qwen-base-url` at it (default `http://127.0.0.1:8000/v1`)
 - **Remote:** `export ALIBABA_API_KEY=...` and `--qwen-api remote` (Alibaba API)
 
-### vLLM setup
+### vLLM setup (only for local Qwen-VL inferencing)
 
 NVIDIA vLLM Docker image for local Qwen-VL (default model: `nvidia/Qwen2.5-VL-7B-Instruct-NVFP4` in `defaults.py`). Requires NVIDIA GPU and Docker with GPU support.
 
