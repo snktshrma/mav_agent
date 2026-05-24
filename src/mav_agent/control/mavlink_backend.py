@@ -17,7 +17,7 @@ from mav_agent.defaults import (
 MASK_USE_POSITION = 0b0000110111111000
 MASK_USE_VELOCITY = 0b0000110111000111
 MASK_USE_YAW = 0b0000100111000111
-MASK_USE_VEL_YAW_RATE = 0b0000110111000111
+MASK_USE_VEL_YAW_RATE = 0b0000011111000111
 
 FRAME_BODY_NED = mavutil.mavlink.MAV_FRAME_BODY_NED
 FRAME_BODY_OFFSET = mavutil.mavlink.MAV_FRAME_BODY_OFFSET_NED
@@ -263,13 +263,10 @@ class MavlinkBackend:
         _ = duration
         return self.send_position_target_local_ned(
             frame_id=FRAME_BODY_OFFSET,
-            type_mask=MASK_USE_POSITION | MASK_USE_VELOCITY,
+            type_mask=MASK_USE_POSITION,
             x=x,
             y=y,
-            z=z,
-            vx=1.5,
-            vy=1.5,
-            vz=1.5,
+            z=-z,
         )
    
     def set_yaw(self, yaw_rad: float, duration: float = 0.0) -> bool:

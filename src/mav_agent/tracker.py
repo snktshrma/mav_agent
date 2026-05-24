@@ -150,6 +150,13 @@ class FollowController:
                     f"Failed to initialize CSRT tracker. Qwen bbox xyxy="
                     f"[{x1:.0f},{y1:.0f},{x2:.0f},{y2:.0f}] on {fw}x{fh} frame."
                 )
+            center_x = fw / 2
+            center_y = fh / 2
+            target_x = x + w / 2
+            target_y = y + h / 2
+            vx, vy, vz, yaw_rate = self.servoing_controller.compute_velocity_control(
+                target_x, target_y, center_x, center_y, lock_altitude=False
+            )
             self._current_object = query or "object"
             self._tracking_active = True
             self._tracking_thread = threading.Thread(
@@ -162,6 +169,7 @@ class FollowController:
                 f"Tracking started for {self._current_object}. "
                 f"bbox xyxy=[{x1:.0f},{y1:.0f},{x2:.0f},{y2:.0f}] "
                 f"csrt xywh=({x:.0f},{y:.0f},{w:.0f},{h:.0f}) frame={fw}x{fh}. "
+                f"first_cmd vx={vx:.3f} vy={vy:.3f} vz={vz:.3f} yaw_rate={yaw_rate:.3f} (body m/s, rad/s). "
                 "Runs until stop or CSRT loses the target."
             )
         except Exception as e:
