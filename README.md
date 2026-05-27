@@ -77,16 +77,47 @@ mav-cli --connection udp:0.0.0.0:14550 --image-source rtsp --rtsp 'rtsp://127.0.
 mav-cli --backend mavlink --connection udp:0.0.0.0:14550
 ```
 
-**ROS2** (ArduPilot DDS) - **Only Stub, yet to be completed**:
+**ROS 2** (ArduPilot DDS) - **Only Stub, yet to be completed**:
 
 ```bash
 source /opt/ros/humble/setup.bash
 source ~/ros2_ws/install/setup.bash   # ardupilot_msgs
 pip install -e ".[ros]"
-mav-cli --backend ros2 --ros-image-topic /camera/image_raw
+mav-cli --backend ros2 --ros-image-topic /camera/image
 ```
 
-Skills are the same for both backends as of now
+Skills are the same for both backends as of now.
+
+### ROS 2 + Gazebo stack (setup)
+
+- **[ROS 2 with Gazebo (ArduPilot)](https://ardupilot.org/dev/docs/ros2-gazebo.html)** - install Gazebo Harmonic, `ardupilot_gz`, SITL, etc.
+- Once setup is done, switch the `ardupilot_gz` repo to the **[`dev/vins` branch](https://github.com/snktshrma/ardupilot_gz/tree/dev/vins)** - iris stereo cameras and bridge topics for VINS (`/camera/image`, `/camera1/image`).
+
+### Vision-based state estimation (VINS)
+
+Run visual odometry **alongside** the ROS 2 sim stack:
+
+- **[vins_fusion_ros2](https://github.com/snktshrma/vins_fusion_ros2)** - ROS 2 port of VINS-Fusion (stereo / mono, IMU). Gazebo configs under `config/gazebo/`.
+- Outputs: `/odometry` (VINS world frame), `/odometry_enu` (Z-up corrected for ENU-style frames).
+
+![Gazebo + VINS + RViz (stereo features and trajectory)](assets/vins_ap.png)
+
+Typical workflow:
+
+```bash
+# 1. AP + ROS2 + Gazebo + iris stereo
+ros2 launch ardupilot_gz_bringup iris_warehouse.launch.py
+
+# 2. VINS
+colcon build --packages-select vins_fusion_ros2
+source install/setup.bash
+ros2 launch vins_fusion_ros2 vins_fusion_ros2.launch.py use_sim_time:=true
+
+# 3. RViz
+ros2 run rviz2 rviz2 -d $(ros2 pkg prefix vins_fusion_ros2)/share/vins_fusion_ros2/config/vins_rviz_config.rviz --ros-args -p use_sim_time:=true
+```
+
+See the fork README for full Gazebo + stereo notes.
 
 ## MCP client setup
 
